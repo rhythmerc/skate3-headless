@@ -1,5 +1,8 @@
 //! Physics/transport boundary. Remote dynamic proxies join the existing solve;
 //! only the locally owned assembly retains its solved reactions.
+//!
+//! The snapshots here ([`Pose`], [`BodyState`], [`PoseState`]) are plain data with the shape of the app's network
+//! messages (`skate_net`); the app converts them, so the sim knows nothing of the transport.
 use super::*;
 use skate_core::physics::{
     assembly::BodySnapshot,
@@ -9,10 +12,45 @@ use skate_core::physics::{
     rigid_body::{RetailQuaternion, world_inverse_inertia},
     world_contact::{ContactPrimitive, triangle_from_volume},
 };
-use skate_net::{
-    Body, Bone, Pose,
-    packed::{BodyState, PoseState},
-};
+
+/// A rigid pose: position, and rotation as `[x, y, z, w]`.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Pose {
+    pub p: [f32; 3],
+    pub q: [f32; 4],
+}
+/// One rigid body: its pose and velocities.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Body {
+    pub pose: Pose,
+    pub velocity: [f32; 3],
+    pub angular: [f32; 3],
+}
+/// One bone of the drawn skeleton, by its index.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Bone {
+    pub index: u16,
+    pub pose: Pose,
+}
+/// The simulated assembly: board bodies then skeleton bodies, and which collide (bit `i` body `i`'s volumes; bit 63:
+/// ragdoll).
+#[derive(Clone, Debug, PartialEq)]
+pub struct BodyState {
+    pub root: Pose,
+    pub enabled: u64,
+    pub bodies: Vec<Body>,
+}
+/// The drawn skeleton's anchor bones.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PoseState {
+    pub root: Pose,
+    pub bones: Vec<Bone>,
+}
+
+/// FNV-1a, 64-bit (the same as `skate_net::hash`, so a schema's fingerprint is unchanged).
+fn fnv1a(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf29ce484222325, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x100000001b3))
+}
 
 pub fn pose(matrix: Mat4) -> Pose {
     let t = Transform::from_matrix(matrix);
@@ -155,7 +193,7 @@ impl Schema {
             })
             .collect();
         let settings = &physics.settings;
-        let fingerprint = skate_net::hash(
+        let fingerprint = fnv1a(
             format!(
                 "v2{:?}{:?}{:?}{:?}{:?}{:?}{:?}",
                 settings.masses,
@@ -418,5 +456,15 @@ impl Proxies {
                 restitution: 0.1,
             },
         });
+    }
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    #[test]
+    fn the_fingerprint_hash_is_fnv1a() {
+        // skate_net::hash's values: peers built before the split compare the same fingerprints.
+        assert_eq!(super::fnv1a(b""), 0xcbf29ce484222325);
+        assert_eq!(super::fnv1a(b"a"), 0xaf63dc4c8601ec8c);
     }
 }
