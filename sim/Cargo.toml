@@ -20,3 +20,6 @@ glam = "=0.30.10"
 tracing = "=0.1.44"
 serde.workspace = true
 serde_json.workspace = true
+# Multiplayer body/pose packing (physics/network.rs). Engine-neutral and Bevy-free; the study's
+# S3 note to keep the packing app-side is still open (it would return plain arrays instead).
+skate-net = { path = "../../skate-net" }

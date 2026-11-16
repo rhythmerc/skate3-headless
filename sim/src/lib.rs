@@ -12,9 +12,22 @@ pub mod apt_movie;
 pub mod apt_scene;
 pub mod apt_text;
 pub mod apt_vm;
+pub mod camera;
+pub mod diagnostics;
 pub mod difficulty;
+pub mod graph_host;
+pub mod graph_runtime;
+pub mod grind_world;
 pub mod hud_runtime;
 pub mod input;
 pub mod map_library;
+pub mod physics;
+pub mod prelude;
 pub mod scoring_runtime;
+pub mod skate_audio;
 pub mod skate_world;
+pub mod skater_animation;
+
+#[cfg(test)]
+#[path = "tests/action_host.rs"]
+mod action_host_tests;
