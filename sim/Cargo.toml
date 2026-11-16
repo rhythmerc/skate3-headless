@@ -1,0 +1,22 @@
+[package]
+name = "skate3-sim"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+description = "The Skate 3 simulation (physics, animation graphs, scoring, player-audio graph) with no Bevy: plain structs in, plain data out."
+
+[lib]
+name = "skate3_sim"
+path = "src/lib.rs"
+
+[dependencies]
+skate-core.workspace = true
+skate-data.workspace = true
+skate-audio-formats.workspace = true
+skate-audio-core.workspace = true
+# Exactly the glam bevy_math 0.18.1 resolves to, so Vec3/Quat/Mat4 are the same types on both sides.
+glam = "=0.30.10"
+# The same tracing bevy_log uses, so Bevy's LogPlugin still collects the sim's events.
+tracing = "=0.1.44"
+serde.workspace = true
+serde_json.workspace = true
