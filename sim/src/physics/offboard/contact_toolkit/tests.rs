@@ -148,7 +148,7 @@ fn toolkit_refuses_world_without_authored_query_metadata() {
 fn embedded_static_rwcm_hits_distinct_actor_query_ids() {
     let mut map = skate_data::skate_map::SkateMap::parse(include_bytes!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../../maps/format-demo.skate"
+        "/tests/fixtures/format-demo.skate"
     )))
     .unwrap();
     map.geometry.collision.clear();

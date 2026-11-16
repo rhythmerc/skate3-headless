@@ -455,7 +455,7 @@ mod tests {
         assert!(after < before);
     }
     fn demo() -> SkateMap {
-        SkateMap::parse(include_bytes!("../../../../maps/format-demo.skate")).unwrap()
+        SkateMap::parse(include_bytes!("../tests/fixtures/format-demo.skate")).unwrap()
     }
     fn material() -> RetailContactMaterial {
         RetailContactMaterial {

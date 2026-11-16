@@ -19,7 +19,7 @@ fn asset_root() -> PathBuf {
 }
 
 fn demo() -> SkateMap {
-    SkateMap::parse(include_bytes!("../../../../../maps/format-demo.skate")).unwrap()
+    SkateMap::parse(include_bytes!("../../tests/fixtures/format-demo.skate")).unwrap()
 }
 
 // Independent +90 degree Y rotation: catches a reversed heading convention.
