@@ -109,12 +109,37 @@ pub struct SkaterPose<'a> {
     pub bones: &'a [NativeMatrix],
 }
 
+impl<'a> SkaterPose<'a> {
+    /// [`Sim::pose`], for a host keeping the parts ([`Sim::into_parts`]).
+    pub fn of(skater: &'a SkaterRuntime) -> Self {
+        SkaterPose {
+            generation: skater.pose_generation,
+            root: crate::animation::native_matrix(skater.animated_skeleton.roots.animation_to_world),
+            bones: &skater.render_pose,
+        }
+    }
+}
+
 /// Where the board is, for a host placing things relative to the skater.
 #[derive(Clone, Copy, Debug)]
 pub struct Link {
     pub deck: Vec3,
     pub deck_forward: Vec3,
     pub grinding: bool,
+}
+
+impl Link {
+    /// [`Sim::link`], for a host keeping the parts ([`Sim::into_parts`]).
+    pub fn of(physics: &GamePhysics, skater: &SkaterRuntime) -> Self {
+        let deck = physics.board.part_transforms()[BodyId::Deck.index()];
+        let t = deck.translation;
+        let f = deck.basis.columns[2];
+        Link {
+            deck: Vec3::new(t.x, t.y, t.z),
+            deck_forward: Vec3::new(f[0], f[1], f[2]),
+            grinding: skater.is_grinding(),
+        }
+    }
 }
 
 impl Sim {
@@ -250,13 +275,7 @@ impl Sim {
     // ---- outputs ----
 
     pub fn pose(&self) -> SkaterPose<'_> {
-        SkaterPose {
-            generation: self.skater.pose_generation,
-            root: crate::animation::native_matrix(
-                self.skater.animated_skeleton.roots.animation_to_world,
-            ),
-            bones: &self.skater.render_pose,
-        }
+        SkaterPose::of(&self.skater)
     }
 
     /// Deck, trucks and wheels, in [`BodyId`] order.
@@ -265,14 +284,7 @@ impl Sim {
     }
 
     pub fn link(&self) -> Link {
-        let deck = self.physics.board.part_transforms()[BodyId::Deck.index()];
-        let t = deck.translation;
-        let f = deck.basis.columns[2];
-        Link {
-            deck: Vec3::new(t.x, t.y, t.z),
-            deck_forward: Vec3::new(f[0], f[1], f[2]),
-            grinding: self.skater.is_grinding(),
-        }
+        Link::of(&self.physics, &self.skater)
     }
 
     /// The stock gameplay camera's latest frame (a desktop host draws with it).
