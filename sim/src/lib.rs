@@ -4,6 +4,13 @@
 //!
 //! Module paths mirror where the code lived in `skate-game/src`, so `crate::physics::...` inside
 //! the sim and the app's re-exports at the old paths both keep resolving.
+//!
+//! The stable surface is the façade: [`Bundle`], [`Sim`] (load, staged step, outputs) and
+//! [`PlayerAudio`] (observations in, mixed PCM out). The modules underneath are public too while
+//! the app still reads sim internals directly (docs/skate3-sim-split.md S4/S7).
+
+pub use sim::{Bundle, Link, Parts, Sim, SimConfig, SkaterPose};
+pub use skate_audio::{PlayerAudioObservation, player::PlayerAudio};
 
 pub mod animation;
 pub mod animation_pose;
@@ -24,6 +31,7 @@ pub mod map_library;
 pub mod physics;
 pub mod prelude;
 pub mod scoring_runtime;
+pub mod sim;
 pub mod skate_audio;
 pub mod skate_world;
 pub mod skater_animation;

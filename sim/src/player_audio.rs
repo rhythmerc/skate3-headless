@@ -69,7 +69,8 @@ pub fn multiplier_sound_id(multiplier: f32) -> Option<u64> {
 pub const FRAME_SECONDS: f32 = sound::FRAME_SECONDS;
 
 /// The recovered rider/board sound graph, ready to render: one observation in (at most) and one
-/// stereo block out per call. The host owns the thread, the pacing and the output.
+/// stereo block out per call. The host owns the thread, the pacing and the output. Not `Send`
+/// (the graph shares voices through `Rc`): prepare it on the thread that renders it.
 pub struct PlayerAudio {
     runtime: AuthoredRuntime,
     sound: sound::PlayerSound,
