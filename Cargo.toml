@@ -1,0 +1,23 @@
+[workspace]
+resolver = "3"
+members = ["sim", "skate-core", "skate-data", "skate-audio-core", "skate-audio-formats"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+skate-core = { path = "skate-core" }
+skate-data = { path = "skate-data" }
+skate-audio-formats = { path = "skate-audio-formats" }
+skate-audio-core = { path = "skate-audio-core" }
+
+# The sim is all hot loops: keep it fast in tests too.
+[profile.dev]
+opt-level = 3
+
+[profile.release]
+debug = 1
