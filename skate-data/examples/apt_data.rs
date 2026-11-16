@@ -1,7 +1,7 @@
 //! Bytecode-only validation. No Bevy, game, input, rendering or simulation.
-#[path = "../../../skate-game/src/apt_display.rs"]
+#[path = "../../sim/src/apt_display.rs"]
 mod apt_display;
-#[path = "../../../skate-game/src/apt_vm.rs"]
+#[path = "../../sim/src/apt_vm.rs"]
 mod apt_vm;
 use apt_vm::*;
 struct Audit;

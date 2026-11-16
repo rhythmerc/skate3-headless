@@ -1,11 +1,11 @@
 //! Executes owned movie bytecode against a data-only host. No game or renderer.
-#[path = "../../../skate-game/src/apt_display.rs"]
+#[path = "../../sim/src/apt_display.rs"]
 mod apt_display;
-#[path = "../../../skate-game/src/apt_movie.rs"]
+#[path = "../../sim/src/apt_movie.rs"]
 mod apt_movie;
-#[path = "../../../skate-game/src/apt_text.rs"]
+#[path = "../../sim/src/apt_text.rs"]
 mod apt_text;
-#[path = "../../../skate-game/src/apt_vm.rs"]
+#[path = "../../sim/src/apt_vm.rs"]
 mod apt_vm;
 use apt_vm::*;
 struct Audit {

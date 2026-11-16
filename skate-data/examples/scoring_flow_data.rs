@@ -1,17 +1,17 @@
 //! Original action-stream validation with supplied data, without game systems.
-#[path = "../../../skate-game/src/apt_display.rs"]
+#[path = "../../sim/src/apt_display.rs"]
 mod apt_display;
-#[path = "../../../skate-game/src/apt_movie.rs"]
+#[path = "../../sim/src/apt_movie.rs"]
 mod apt_movie;
-#[path = "../../../skate-game/src/apt_scene.rs"]
+#[path = "../../sim/src/apt_scene.rs"]
 mod apt_scene;
-#[path = "../../../skate-game/src/apt_text.rs"]
+#[path = "../../sim/src/apt_text.rs"]
 mod apt_text;
-#[path = "../../../skate-game/src/apt_vm.rs"]
+#[path = "../../sim/src/apt_vm.rs"]
 mod apt_vm;
-#[path = "../../../skate-game/src/hud_runtime.rs"]
+#[path = "../../sim/src/hud_runtime.rs"]
 mod hud_runtime;
-#[path = "../../../skate-game/src/scoring_runtime.rs"]
+#[path = "../../sim/src/scoring_runtime.rs"]
 mod scoring_runtime;
 use skate_core::{
     animation::output::attributes::AttributeName, physics::filtered_state::FilteredCategory,
