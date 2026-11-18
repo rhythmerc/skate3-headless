@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["sim", "skate-core", "skate-data", "skate-audio-core", "skate-audio-formats"]
+members = ["sim", "engine", "skate-core", "skate-data", "skate-audio-core", "skate-audio-formats"]
 
 [workspace.package]
 version = "0.1.0"
@@ -14,6 +14,10 @@ skate-core = { path = "skate-core" }
 skate-data = { path = "skate-data" }
 skate-audio-formats = { path = "skate-audio-formats" }
 skate-audio-core = { path = "skate-audio-core" }
+skate3-sim = { path = "sim" }
+# The buildAR engine contract (`engine`): https://github.com/rhythmerc/buildar-engine-core. A host must pin the same
+# revision.
+engine-core = { git = "https://github.com/rhythmerc/buildar-engine-core", rev = "1da95abb6dc14ea3d6cc72f8964014f8a1d24678" }
 
 # The sim is all hot loops: keep it fast in tests too.
 [profile.dev]

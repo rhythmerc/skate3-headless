@@ -36,6 +36,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "engine-core"
+version = "0.1.0"
+source = "git+https://github.com/rhythmerc/buildar-engine-core?rev=1da95abb6dc14ea3d6cc72f8964014f8a1d24678#1da95abb6dc14ea3d6cc72f8964014f8a1d24678"
+dependencies = [
+ "glam",
+ "serde",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -230,6 +239,16 @@ dependencies = [
  "skate-audio-formats",
  "skate-core",
  "zstd",
+]
+
+[[package]]
+name = "skate3-engine"
+version = "0.1.0"
+dependencies = [
+ "engine-core",
+ "serde_json",
+ "skate-core",
+ "skate3-sim",
 ]
 
 [[package]]

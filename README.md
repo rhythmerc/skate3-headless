@@ -22,6 +22,7 @@ Without that data, the library builds and its asset-free tests run, but it can't
 | Crate | What |
 |---|---|
 | `sim` (`skate3-sim`) | The simulation and its front interface: `Bundle::open`, `Sim::load`, `Sim::tick`, `PlayerAudio` |
+| `engine` (`skate3-engine`) | Skate 3 as the [buildAR engine contract](https://github.com/rhythmerc/buildar-engine-core) (`engine_core::EngineCore`): stage, input, model, HUD, sound and the data it runs on. A host pins the same `engine-core` revision as this workspace |
 | `skate-core` | Retail physics primitives, maths, the contact solver |
 | `skate-data` | Readers for the converted data: maps, collision, graphs |
 | `skate-audio-core` | The player-audio mixer and its graph primitives |
