@@ -254,12 +254,141 @@ fn scalar_shape(len: u32) -> (i32, u32) {
     (floats, groups)
 }
 
+// ------------------------------------------------------------- the scalar paths, on local copies
+//
+// The scalar paths below read and write one word at a time through `Guest`, each access a segment
+// lookup: on the Quest, where the mixer takes this path, that lookup was most of the audio thread.
+// When the source and destination spans don't overlap and each lies whole in one segment - every
+// call the game makes - the same loop runs on stack copies of the two spans and the destination
+// is written back in one block. With disjoint spans no load can see a store of the same call, so
+// the order of the memory traffic can't change a result; the arithmetic, its order and the
+// flush-mode toggles around it are the ones the word-at-a-time loop performs, element for element.
+// Anything else (overlap, a span off the segments, a span over `LOCAL`) takes the original path,
+// errors and partial writes included.
+
+/// The longest span the local path copies (the game's calls are 256 floats, 1 KiB).
+const LOCAL: usize = 2048;
+
+/// `[a, a+len)` and `[b, b+len)` don't overlap (and neither wraps).
+fn disjoint(a: u32, b: u32, len: u32) -> bool {
+    match (a.checked_add(len), b.checked_add(len)) {
+        (Some(a_end), Some(b_end)) => a_end <= b || b_end <= a,
+        _ => false,
+    }
+}
+
+/// The two spans copied out, if the local path applies: the source, and the destination (read
+/// only for the accumulating twin).
+#[cfg(test)]
+thread_local! {
+    /// Tests: the word-at-a-time path only, to compare the local one against.
+    static WORD_AT_A_TIME: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+fn local_spans(g: &Guest, dst: u32, src: u32, len: u32, read_dst: bool) -> Option<([u8; LOCAL], [u8; LOCAL])> {
+    let n = len as usize;
+    #[cfg(test)]
+    if WORD_AT_A_TIME.with(|w| w.get()) {
+        return None;
+    }
+    if n > LOCAL || !disjoint(src, dst, len) {
+        return None;
+    }
+    let mut s = [0u8; LOCAL];
+    let mut d = [0u8; LOCAL];
+    s[..n].copy_from_slice(g.span(src, n).ok()?);
+    let dst_bytes = g.span(dst, n).ok()?;
+    if read_dst {
+        d[..n].copy_from_slice(dst_bytes);
+    }
+    Some((s, d))
+}
+
+fn word(b: &[u8; LOCAL], at: usize) -> f64 {
+    fp::single_from_bits(u32::from_be_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]]))
+}
+
+fn put(b: &mut [u8; LOCAL], at: usize, value: f64) {
+    b[at..at + 4].copy_from_slice(&fp::single_to_bits(value).to_be_bytes());
+}
+
+/// [`scale_scalar`] on local copies: the same loop, the same arithmetic.
+fn scale_scalar_local(g: &mut Guest, dst: u32, len: u32, k: f64, s: &[u8; LOCAL], d: &mut [u8; LOCAL]) -> Result<()> {
+    let mut fpscr = Fpscr::capture();
+    let (floats, mut groups) = scalar_shape(len);
+    let mut o = 0usize;
+    let n = len as usize;
+    if floats >= 4 {
+        loop {
+            fpscr.disable_flush_mode_unconditional();
+            let (a0, a1, a2, a3) = (word(s, o), word(s, o + 4), word(s, o + 8), word(s, o + 12));
+            let (p0, p1, p2, p3) = (fp::mul_single(a0, k), fp::mul_single(a1, k), fp::mul_single(a2, k), fp::mul_single(a3, k));
+            put(d, o, p0);
+            put(d, o + 4, p1);
+            put(d, o + 8, p2);
+            put(d, o + 12, p3);
+            o += 16;
+            groups -= 1;
+            if groups == 0 {
+                break;
+            }
+        }
+    }
+    while o < n {
+        fpscr.disable_flush_mode_unconditional();
+        let p = fp::mul_single(word(s, o), k);
+        put(d, o, p);
+        o += 4;
+    }
+    drop(fpscr);
+    g.set_span(dst, &d[..n])
+}
+
+/// [`accumulate_scalar`] on local copies: the same loop, the same arithmetic.
+fn accumulate_scalar_local(g: &mut Guest, dst: u32, len: u32, k: f64, s: &[u8; LOCAL], d: &mut [u8; LOCAL]) -> Result<()> {
+    let mut fpscr = Fpscr::capture();
+    let (floats, mut groups) = scalar_shape(len);
+    let mut o = 0usize;
+    let n = len as usize;
+    if floats >= 4 {
+        loop {
+            fpscr.disable_flush_mode_unconditional();
+            let (c0, c1, c2, c3) = (word(d, o), word(d, o + 4), word(d, o + 8), word(d, o + 12));
+            let (a0, a1, a2, a3) = (word(s, o), word(s, o + 4), word(s, o + 8), word(s, o + 12));
+            let r0 = fp::fmadd_single(a0, k, c0);
+            let r1 = fp::fmadd_single(a1, k, c1);
+            let r2 = fp::fmadd_single(a2, k, c2);
+            let r3 = fp::fmadd_single(a3, k, c3);
+            put(d, o, r0);
+            put(d, o + 4, r1);
+            put(d, o + 8, r2);
+            put(d, o + 12, r3);
+            o += 16;
+            groups -= 1;
+            if groups == 0 {
+                break;
+            }
+        }
+    }
+    while o < n {
+        fpscr.disable_flush_mode_unconditional();
+        let r = fp::fmadd_single(word(s, o), k, word(d, o));
+        put(d, o, r);
+        o += 4;
+    }
+    drop(fpscr);
+    g.set_span(dst, &d[..n])
+}
+
 #[cfg_attr(target_arch = "x86_64", target_feature(enable = "sse4.1,fma"))]
 unsafe fn scale_scalar(g: &mut Guest, dst: u32, src: u32, count: u32, k: f64) -> Result<()> {
     // rlwinm r9,r6,2,0,29 ; add r9,r9,r11 — the destination end, count*4 bytes on.
     let dst_end = dst.wrapping_add((count << 2) & 0xFFFF_FFFC);
     if dst >= dst_end {
         return Ok(()); // cmplw cr6,r11,r9 ; bge
+    }
+    if let Some((s, mut d)) = local_spans(g, dst, src, dst_end - dst, false) {
+        return scale_scalar_local(g, dst, dst_end - dst, k, &s, &mut d);
     }
 
     let mut fpscr = Fpscr::capture();
@@ -323,6 +452,9 @@ unsafe fn accumulate_scalar(g: &mut Guest, dst: u32, src: u32, count: u32, k: f6
     let dst_end = dst.wrapping_add((count << 2) & 0xFFFF_FFFC);
     if dst >= dst_end {
         return Ok(());
+    }
+    if let Some((s, mut d)) = local_spans(g, dst, src, dst_end - dst, true) {
+        return accumulate_scalar_local(g, dst, dst_end - dst, k, &s, &mut d);
     }
 
     let mut fpscr = Fpscr::capture();
@@ -751,5 +883,52 @@ mod tests {
         assert_eq!(vmx::get_mxcsr(), before);
         scale(&mut g, DST + 4, SRC + 4, 7, 1.0).unwrap();
         assert_eq!(vmx::get_mxcsr(), before, "the scalar path too");
+    }
+
+    /// The local-copy scalar paths write exactly what the word-at-a-time ones write: random
+    /// values with denormals, zeros and large magnitudes mixed in, every length shape (groups and
+    /// tails), unaligned spans, three scales.
+    #[test]
+    fn the_local_scalar_paths_match_the_word_at_a_time_ones() {
+        let mut seed = 0x1234_5678u32;
+        let mut next = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            seed
+        };
+        for &count in &[1u32, 3, 4, 5, 7, 16, 17, 63, 65, 255, 256, 257] {
+            for &(doff, soff) in &[(0u32, 0u32), (4, 8), (12, 0), (0, 36)] {
+                for &k in &[1.0f64, 0.0, 0.7071067811865476] {
+                    let values: Vec<u32> = (0..2 * count + 2)
+                        .map(|i| match next() % 8 {
+                            0 => next() & 0x007F_FFFF, // denormal
+                            1 => 0,
+                            2 => (next() & 0x8000_0000) | 0x7E00_0000 | (next() & 0x00FF_FFFF), // large
+                            _ => (next() & 0xBFFF_FFFF) | if i % 2 == 0 { 0 } else { 0x3000_0000 },
+                        })
+                        .collect();
+                    let run = |word_at_a_time: bool, accumulate: bool| {
+                        WORD_AT_A_TIME.with(|w| w.set(word_at_a_time));
+                        let mut g = guest();
+                        for (i, v) in values.iter().enumerate() {
+                            let base = if i < count as usize { SRC + soff } else { DST + doff - 4 * count };
+                            g.set_u32(base + 4 * i as u32, *v).unwrap();
+                        }
+                        let (d, s) = (DST + doff, SRC + soff);
+                        if accumulate {
+                            scale_accumulate(&mut g, d, s, count, k).unwrap();
+                        } else {
+                            scale(&mut g, d, s, count, k).unwrap();
+                        }
+                        WORD_AT_A_TIME.with(|w| w.set(false));
+                        (0..count).map(|i| g.u32(d + 4 * i).unwrap()).collect::<Vec<u32>>()
+                    };
+                    for accumulate in [false, true] {
+                        assert_eq!(run(true, accumulate), run(false, accumulate), "count {count} offsets {doff},{soff} k {k} accumulate {accumulate}");
+                    }
+                }
+            }
+        }
     }
 }
