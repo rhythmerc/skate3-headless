@@ -5,7 +5,7 @@ scoring, the HUD scripts, input gestures and the player-audio graph. It has no e
 dependency (no Bevy). You give it input and a world, step it, and read back poses, the board, the camera
 frame, HUD state and audio.
 
-It is the Skate 3 engine of [skate3-quest-ar](https://github.com/rhythmerc/skate3-quest-ar), a Quest 3
+It is the Skate 3 engine of [buildAR](https://github.com/rhythmerc/buildar), a Quest 3
 AR skateboarding app. That app does all the rendering, and it uses this library the way it uses
 [thug2-headless](https://github.com/rhythmerc/thug2-headless) for THUG2.
 
@@ -13,7 +13,7 @@ AR skateboarding app. That app does all the rendering, and it uses this library 
 
 **No game data is in this repository.** The simulation runs on data converted from your own Skate 3
 disc: the skater, animations, graphs and sounds. See the app's
-[import guide](https://github.com/rhythmerc/skate3-quest-ar/blob/main/docs/IMPORT-SKATE3.md).
+[import guide](https://github.com/rhythmerc/buildar/blob/main/docs/IMPORT-SKATE3.md).
 
 Without that data, the library builds and its asset-free tests run, but it can't load a skater.
 

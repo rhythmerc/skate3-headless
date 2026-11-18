@@ -1,7 +1,7 @@
 //! **Skate 3 only.** Skate 3's side of the engine contract ([`engine_core`]): what the app needs to know about Skate 3
 //! to host it, said as the contract's plain data, over its simulation (`skate3-sim`). No Bevy.
 //!
-//! It lives in skate3-headless beside `skate3-sim`; a host (skate3-quest-ar) depends on it by revision. Nothing here
+//! It lives in skate3-headless beside `skate3-sim`; a host (buildAR) depends on it by revision. Nothing here
 //! depends on a host.
 //!
 //! - [`engine`]: Skate 3 as the runtime drives it ([`engine_core::EngineCore`]), made on a worker by its factory.
@@ -23,7 +23,7 @@ pub mod sound;
 pub mod stage;
 pub mod trick;
 
-/// The player's Skate 3 data: what the desktop setup makes from their own disc (skate3-quest-ar's `docs/IMPORT-SKATE3.md`), an `assets`
+/// The player's Skate 3 data: what the desktop setup makes from their own disc (buildAR's `docs/IMPORT-SKATE3.md`), an `assets`
 /// folder with `private/game.json` and, beside it, the decoded sound banks (`audio-pcm-cache`: the headset can't
 /// decode them itself).
 pub const DATA: engine_core::GameFiles = engine_core::GameFiles {
